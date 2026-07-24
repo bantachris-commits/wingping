@@ -11,6 +11,7 @@ export const DEFAULT_SETTINGS = {
   maxStaleSeconds: 60,   // skip contacts not heard from recently
   notify: true,
   nearestAirport: "",    // ICAO/IATA code used for the LiveATC radio link
+  groundElevFt: null,    // home ground elevation (ft MSL) for AGL display; auto-filled on location lookup
   categories: {
     military: true,
     helicopter: true,
@@ -25,7 +26,8 @@ export const DEFAULT_SETTINGS = {
   watchlist: [],         // always alert — hex / registration / callsign / type, trailing * wildcard
   exclusions: [],        // never alert — same matching rules, checked first
   provider: "airplanes.live",
-  mapProvider: "adsbexchange"
+  mapProvider: "wingping",   // embedded map page; external globes still selectable
+  mapLayer: "satellite"      // default base layer on the embedded map
 };
 
 export const API_PROVIDERS = {
@@ -36,10 +38,28 @@ export const API_PROVIDERS = {
 };
 
 export const MAP_PROVIDERS = {
+  wingping:         hex => `map.html${hex ? `?icao=${hex}` : ""}`, // extension page (resolve with chrome.runtime.getURL)
   adsbexchange:     hex => `https://globe.adsbexchange.com/?icao=${hex}`,
   "airplanes.live": hex => `https://globe.airplanes.live/?icao=${hex}`,
   "adsb.lol":       hex => `https://adsb.lol/?icao=${hex}`
 };
+
+// Shared blip/marker color by alert state.
+export function alertColor(match) {
+  if (match?.excluded) return "#3f4a63";
+  const has = c => match?.categories?.includes(c);
+  if (has("emergency")) return "#ff2d2d";
+  if (match?.watch) return "#4ade80";
+  if (has("military")) return "#f87171";
+  if (has("helicopter")) return "#fbbf24";
+  if (has("balloon")) return "#c084fc";
+  if (has("drone")) return "#f472b6";
+  if (has("glider")) return "#2dd4bf";
+  if (has("heavy")) return "#818cf8";
+  if (has("jet")) return "#60a5fa";
+  if (has("prop")) return "#9ca3af";
+  return "#64748b";
+}
 
 export function atcUrl(airport) {
   const code = (airport || "").trim().toUpperCase();
@@ -242,6 +262,28 @@ export function formatAlt(ac) {
   if (ac.alt_baro === "ground") return "on ground";
   if (typeof ac.alt_baro === "number") return `${ac.alt_baro.toLocaleString()} ft`;
   return "alt n/a";
+}
+
+// Height above ground (ft), using geometric altitude when broadcast (true MSL),
+// else barometric. Needs the home ground elevation from settings; returns null
+// if unknown. Approximation: uses ground elevation at YOUR location, which is
+// accurate for a small "overhead" radius.
+export function aglFt(ac, settings) {
+  const elev = settings?.groundElevFt;
+  if (typeof elev !== "number") return null;
+  if (ac.alt_baro === "ground") return 0;
+  const alt = typeof ac.alt_geom === "number" ? ac.alt_geom
+            : typeof ac.alt_baro === "number" ? ac.alt_baro : null;
+  if (alt === null) return null;
+  return Math.max(0, Math.round(alt - elev));
+}
+
+// "5,300 ft MSL · 1,150 ft AGL" (AGL part only when ground elevation is known).
+export function formatAltBoth(ac, settings) {
+  if (ac.alt_baro === "ground") return "on ground";
+  const msl = typeof ac.alt_baro === "number" ? `${ac.alt_baro.toLocaleString()} ft MSL` : "alt n/a";
+  const agl = aglFt(ac, settings);
+  return agl === null ? msl : `${msl} · ${agl.toLocaleString()} ft AGL`;
 }
 
 export function distanceNm(ac, lat, lon) {

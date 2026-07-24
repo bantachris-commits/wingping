@@ -2,6 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8">
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
   <style>
     :root { color-scheme: light dark; }
     body {
@@ -27,7 +28,18 @@
     #radarWrap { display: none; padding: 8px 12px 4px; }
     #radarWrap.open { display: block; }
     #radar { display: block; margin: 0 auto; cursor: crosshair; }
-    #radarHint { text-align: center; color: #5b6b8c; font-size: 10px; margin: 4px 0 2px; }
+    #radarHint, #mapHint { text-align: center; color: #5b6b8c; font-size: 10px; margin: 4px 0 2px; }
+
+    /* mini map */
+    #mapWrap { display: none; padding: 8px 12px 4px; position: relative; }
+    #mapWrap.open { display: block; }
+    #miniMap { height: 320px; border-radius: 8px; border: 1px solid #223051; background: #0b1220; }
+    #expandMap {
+      position: absolute; top: 16px; right: 20px; z-index: 1000;
+      background: rgba(11,18,32,.9); color: #e5eaf3; border: 1px solid #2a3450;
+      border-radius: 6px; padding: 3px 9px; cursor: pointer; font-size: 11px;
+    }
+    .leaflet-container { background: #0b1220; font: 11px system-ui; }
 
     ul { list-style: none; margin: 0; padding: 0; max-height: 340px; overflow-y: auto; }
     li {
@@ -58,18 +70,25 @@
 <body>
   <header>
     <h1>WingPing</h1>
+    <button id="mapBtn" title="Open map view">🗺 Map</button>
     <button id="radarBtn" title="Toggle radar scope">📡</button>
-    <a href="#" id="atc" title="Listen to live air traffic control">📻 ATC</a>
+    <a href="#" id="atc" title="Listen to live air traffic control on LiveATC">📻 ATC</a>
     <button id="refresh">Refresh</button>
     <a href="#" id="options">Settings</a>
   </header>
   <div id="err" hidden></div>
   <div id="meta"></div>
+  <div id="mapWrap">
+    <div id="miniMap"></div>
+    <button id="expandMap" title="Open full map tab">⛶ Full</button>
+    <div id="mapHint">Click an aircraft for its flight path · layers &amp; trails in full view</div>
+  </div>
   <div id="radarWrap">
     <canvas id="radar" width="340" height="340"></canvas>
     <div id="radarHint">All traffic in range, alert status or not · click a blip for its flight path</div>
   </div>
   <ul id="list"></ul>
+  <script src="vendor/leaflet/leaflet.js"></script>
   <script type="module" src="popup.js"></script>
 </body>
 </html>

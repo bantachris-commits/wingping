@@ -15,13 +15,43 @@ async function load() {
   $("cooldownMinutes").value = s.cooldownMinutes;
   $("provider").value = s.provider;
   $("mapProvider").value = s.mapProvider;
+  $("mapLayer").value = s.mapLayer || "satellite";
   $("notify").checked = s.notify;
   $("ignoreGround").checked = s.ignoreGround;
   $("nearestAirport").value = s.nearestAirport || "";
+  $("groundElevFt").value = typeof s.groundElevFt === "number" ? s.groundElevFt : "";
   for (const c of CATS) $(`cat-${c}`).checked = !!s.categories[c];
   $("watchlist").value = (s.watchlist || []).join("\n");
   $("exclusions").value = (s.exclusions || []).join("\n");
 }
+
+// --- ground elevation via Open-Meteo (free, no key) ------------------------------
+
+async function fetchElevationFt(lat, lon) {
+  const url = `https://api.open-meteo.com/v1/elevation?latitude=${lat}&longitude=${lon}`;
+  const res = await fetch(url, { headers: { accept: "application/json" } });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const data = await res.json();
+  const m = data.elevation?.[0];
+  if (typeof m !== "number") throw new Error("no elevation returned");
+  return Math.round(m * 3.28084);
+}
+
+async function autoFillElevation() {
+  const lat = parseFloat($("lat").value), lon = parseFloat($("lon").value);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+  try {
+    $("groundElevFt").value = await fetchElevationFt(lat, lon);
+  } catch (e) {
+    console.warn("elevation lookup failed:", e.message);
+  }
+}
+
+$("fetchElev").addEventListener("click", e => {
+  e.preventDefault();
+  $("groundElevFt").value = "";
+  autoFillElevation();
+});
 
 // --- address / airport-code lookup via Nominatim (OpenStreetMap) ---------------
 
@@ -49,6 +79,7 @@ async function lookup() {
     $("lat").value = parseFloat(hit.lat).toFixed(5);
     $("lon").value = parseFloat(hit.lon).toFixed(5);
     status.textContent = `✓ ${hit.display_name}`;
+    autoFillElevation();
 
     if (isCode) {
       // 4 letters ≈ ICAO already; 3 letters is IATA — LiveATC handles both in search.
@@ -66,6 +97,7 @@ $("geo").addEventListener("click", () => {
       $("lat").value = pos.coords.latitude.toFixed(5);
       $("lon").value = pos.coords.longitude.toFixed(5);
       $("geo").textContent = "📍 My location";
+      autoFillElevation();
     },
     e => {
       $("geo").textContent = `Failed: ${e.message}`;
@@ -90,10 +122,13 @@ $("save").addEventListener("click", async () => {
     cooldownMinutes: Math.max(1, parseInt($("cooldownMinutes").value, 10) || 30),
     provider: $("provider").value,
     mapProvider: $("mapProvider").value,
+    mapLayer: $("mapLayer").value,
     notify: $("notify").checked,
     ignoreGround: $("ignoreGround").checked,
     maxStaleSeconds: DEFAULT_SETTINGS.maxStaleSeconds,
     nearestAirport: $("nearestAirport").value.trim().toUpperCase(),
+    groundElevFt: Number.isFinite(parseFloat($("groundElevFt").value))
+      ? Math.round(parseFloat($("groundElevFt").value)) : null,
     categories,
     watchlist: parseList($("watchlist").value),
     exclusions: parseList($("exclusions").value)

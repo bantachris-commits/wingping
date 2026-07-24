@@ -1,7 +1,8 @@
 import {
-  DEFAULT_SETTINGS, mapUrl, atcUrl, formatAlt, distanceNm, bearingDeg,
-  CATEGORY_MATCHERS
+  DEFAULT_SETTINGS, mapUrl, atcUrl, formatAlt, formatAltBoth, distanceNm,
+  CATEGORY_MATCHERS, alertColor
 } from "./shared/classify.js";
+import { startRadar } from "./shared/radar.js";
 
 const list = document.getElementById("list");
 const meta = document.getElementById("meta");
@@ -9,13 +10,16 @@ const err = document.getElementById("err");
 const radarWrap = document.getElementById("radarWrap");
 const radarBtn = document.getElementById("radarBtn");
 const canvas = document.getElementById("radar");
-const ctx = canvas.getContext("2d");
 
 let settings = { ...DEFAULT_SETTINGS };
 let snapshot = [];
 let radarOn = false;
-let animId = null;
-let blips = []; // {x, y, hex} for click hit-testing
+let stopRadar = null;
+
+function openMapFor(hex) {
+  const url = mapUrl(hex, settings);
+  chrome.tabs.create({ url: url.startsWith("http") ? url : chrome.runtime.getURL(url) });
+}
 
 document.getElementById("options").addEventListener("click", e => {
   e.preventDefault();
@@ -23,28 +27,89 @@ document.getElementById("options").addEventListener("click", e => {
 });
 document.getElementById("refresh").addEventListener("click", async () => {
   meta.textContent = "Refreshing…";
-  await chrome.runtime.sendMessage("wingping-refresh");
+  try { await chrome.runtime.sendMessage("wingping-refresh"); } catch { /* worker waking up */ }
   render();
 });
 document.getElementById("atc").addEventListener("click", e => {
   e.preventDefault();
   chrome.tabs.create({ url: atcUrl(settings.nearestAirport) });
 });
+
+// --- mini map panel (opens in the popup, like the radar) ------------------------
+
+const mapWrap = document.getElementById("mapWrap");
+const mapBtn = document.getElementById("mapBtn");
+let mapOn = false;
+let mini = null, miniBase = null, miniRing = null, miniHome = null;
+const miniMarkers = new Map();
+
+const TILE_LAYERS = {
+  satellite: ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", "© Esri"],
+  streets:   ["https://tile.openstreetmap.org/{z}/{x}/{y}.png", "© OSM"],
+  dark:      ["https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png", "© OSM · CARTO"]
+};
+
+function initMiniMap() {
+  mini = L.map("miniMap", { zoomControl: false, attributionControl: false });
+  const [url] = TILE_LAYERS[settings.mapLayer] || TILE_LAYERS.satellite;
+  miniBase = L.tileLayer(url, { maxZoom: 19 }).addTo(mini);
+  mini.setView([settings.lat, settings.lon], 10);
+}
+
+function updateMiniMap() {
+  if (!mini) return;
+  const pos = [settings.lat, settings.lon];
+  if (!miniHome) miniHome = L.circleMarker(pos, { radius: 4, color: "#93b4f8", fillColor: "#93b4f8", fillOpacity: 1 }).addTo(mini);
+  else miniHome.setLatLng(pos);
+  if (!miniRing) miniRing = L.circle(pos, { radius: settings.radiusNm * 1852, color: "#60a5fa", weight: 1, dashArray: "4 5", fill: false }).addTo(mini);
+  else { miniRing.setLatLng(pos); miniRing.setRadius(settings.radiusNm * 1852); }
+
+  const seen = new Set();
+  for (const ac of snapshot) {
+    if (typeof ac.lat !== "number" || typeof ac.lon !== "number") continue;
+    seen.add(ac.hex);
+    const color = alertColor(ac.match);
+    let mk = miniMarkers.get(ac.hex);
+    if (!mk) {
+      mk = L.circleMarker([ac.lat, ac.lon], { radius: 5, color, fillColor: color, fillOpacity: .95, weight: 1.5 })
+        .addTo(mini)
+        .bindTooltip(() => `${ac.flight || ac.r || ac.hex.toUpperCase()} · ${ac.t || "?"} · ${formatAltBoth(ac, settings)}`,
+                     { direction: "top", offset: [0, -6] });
+      mk.on("click", () => openMapFor(ac.hex));
+      miniMarkers.set(ac.hex, mk);
+    } else {
+      mk.setLatLng([ac.lat, ac.lon]);
+      mk.setStyle({ color, fillColor: color });
+    }
+  }
+  for (const [hex, mk] of miniMarkers) {
+    if (!seen.has(hex)) { mini.removeLayer(mk); miniMarkers.delete(hex); }
+  }
+}
+
+mapBtn.addEventListener("click", () => {
+  mapOn = !mapOn;
+  mapWrap.classList.toggle("open", mapOn);
+  mapBtn.classList.toggle("toggled", mapOn);
+  if (mapOn) {
+    if (radarOn) radarBtn.click();
+    if (!mini) initMiniMap();
+    setTimeout(() => { mini.invalidateSize(); updateMiniMap(); }, 60);
+  }
+});
+
+document.getElementById("expandMap").addEventListener("click", () => {
+  chrome.tabs.create({ url: chrome.runtime.getURL("map.html") });
+});
+
 radarBtn.addEventListener("click", () => {
   radarOn = !radarOn;
   radarWrap.classList.toggle("open", radarOn);
   radarBtn.classList.toggle("toggled", radarOn);
-  if (radarOn) sweep(); else cancelAnimationFrame(animId);
-});
-canvas.addEventListener("click", e => {
-  const rect = canvas.getBoundingClientRect();
-  const x = e.clientX - rect.left, y = e.clientY - rect.top;
-  let best = null, bestD = 14; // 14px hit radius
-  for (const b of blips) {
-    const d = Math.hypot(b.x - x, b.y - y);
-    if (d < bestD) { bestD = d; best = b; }
-  }
-  if (best) chrome.tabs.create({ url: mapUrl(best.hex, settings) });
+  if (radarOn) {
+    if (mapOn) mapBtn.click();
+    stopRadar = startRadar(canvas, () => ({ snapshot, settings }), openMapFor);
+  } else if (stopRadar) { stopRadar(); stopRadar = null; }
 });
 
 async function getSettings() {
@@ -52,112 +117,6 @@ async function getSettings() {
   return { ...DEFAULT_SETTINGS, ...s,
     categories: { ...DEFAULT_SETTINGS.categories, ...(s?.categories || {}) } };
 }
-
-// Color for a contact based on its alert evaluation.
-function colorFor(ac) {
-  const m = ac.match;
-  if (m?.excluded) return "#3f4a63";
-  if (m?.categories?.includes("emergency")) return "#ff2d2d";
-  if (m?.watch) return "#4ade80";
-  if (m?.categories?.includes("military")) return "#f87171";
-  if (m?.categories?.includes("helicopter")) return "#fbbf24";
-  if (m?.categories?.includes("balloon")) return "#c084fc";
-  if (m?.categories?.includes("drone")) return "#f472b6";
-  if (m?.categories?.includes("glider")) return "#2dd4bf";
-  if (m?.categories?.includes("heavy")) return "#818cf8";
-  if (m?.categories?.includes("jet")) return "#60a5fa";
-  if (m?.categories?.includes("prop")) return "#9ca3af";
-  return "#64748b";
-}
-
-// --- radar scope ---------------------------------------------------------------
-
-function sweep(ts = 0) {
-  const W = canvas.width, H = canvas.height;
-  const cx = W / 2, cy = H / 2, R = Math.min(cx, cy) - 14;
-  ctx.clearRect(0, 0, W, H);
-
-  // scope background
-  const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, R);
-  bg.addColorStop(0, "#06180d");
-  bg.addColorStop(1, "#020a05");
-  ctx.fillStyle = bg;
-  ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fill();
-
-  // range rings + cardinal spokes
-  ctx.strokeStyle = "#1c4a2c"; ctx.lineWidth = 1; ctx.fillStyle = "#2f6b42";
-  ctx.font = "9px system-ui"; ctx.textAlign = "left";
-  for (let i = 1; i <= 4; i++) {
-    ctx.beginPath(); ctx.arc(cx, cy, (R * i) / 4, 0, Math.PI * 2); ctx.stroke();
-    const nm = (settings.radiusNm * i) / 4;
-    ctx.fillText(`${+nm.toFixed(1)}`, cx + 3, cy - (R * i) / 4 + 10);
-  }
-  ctx.beginPath();
-  ctx.moveTo(cx - R, cy); ctx.lineTo(cx + R, cy);
-  ctx.moveTo(cx, cy - R); ctx.lineTo(cx, cy + R);
-  ctx.stroke();
-  ctx.fillStyle = "#3f8f58"; ctx.textAlign = "center"; ctx.font = "bold 10px system-ui";
-  ctx.fillText("N", cx, cy - R + 1); ctx.fillText("S", cx, cy + R + 11);
-  ctx.textAlign = "left"; ctx.fillText("E", cx + R + 3, cy + 3);
-  ctx.textAlign = "right"; ctx.fillText("W", cx - R - 3, cy + 3);
-
-  // rotating sweep beam
-  const angle = ((ts / 1000) * (Math.PI * 2 / 4)) % (Math.PI * 2); // 4 s per revolution
-  const grad = ctx.createConicGradient
-    ? (() => { const g = ctx.createConicGradient(angle - Math.PI / 2, cx, cy);
-        g.addColorStop(0, "rgba(74,222,128,0.30)");
-        g.addColorStop(0.10, "rgba(74,222,128,0)");
-        g.addColorStop(1, "rgba(74,222,128,0)");
-        return g; })()
-    : "rgba(74,222,128,0.08)";
-  ctx.save();
-  ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.clip();
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, W, H);
-  ctx.restore();
-  ctx.strokeStyle = "rgba(74,222,128,0.9)"; ctx.lineWidth = 1.5;
-  ctx.beginPath(); ctx.moveTo(cx, cy);
-  ctx.lineTo(cx + R * Math.sin(angle), cy - R * Math.cos(angle)); ctx.stroke();
-
-  // home dot
-  ctx.fillStyle = "#93b4f8";
-  ctx.beginPath(); ctx.arc(cx, cy, 3, 0, Math.PI * 2); ctx.fill();
-
-  // blips — every contact in the snapshot, alert status or not
-  blips = [];
-  ctx.font = "9px ui-monospace, monospace";
-  for (const ac of snapshot) {
-    const dist = distanceNm(ac, settings.lat, settings.lon);
-    const brg = bearingDeg(ac, settings.lat, settings.lon);
-    if (dist === null || brg === null) continue;
-    const r = Math.min(dist / settings.radiusNm, 1) * R;
-    const rad = (brg * Math.PI) / 180;
-    const x = cx + r * Math.sin(rad);
-    const y = cy - r * Math.cos(rad);
-    blips.push({ x, y, hex: ac.hex });
-
-    const color = colorFor(ac);
-    ctx.fillStyle = color;
-    ctx.beginPath(); ctx.arc(x, y, ac.match && !ac.match.excluded ? 4.5 : 3, 0, Math.PI * 2); ctx.fill();
-
-    // velocity leader line from track
-    if (typeof ac.track === "number" && typeof ac.gs === "number" && ac.gs > 30) {
-      const tr = (ac.track * Math.PI) / 180;
-      const len = 6 + Math.min(ac.gs / 40, 10);
-      ctx.strokeStyle = color; ctx.lineWidth = 1.2;
-      ctx.beginPath(); ctx.moveTo(x, y);
-      ctx.lineTo(x + len * Math.sin(tr), y - len * Math.cos(tr)); ctx.stroke();
-    }
-
-    ctx.fillStyle = ac.match?.excluded ? "#4a5670" : "#a7f3c9";
-    ctx.textAlign = "left";
-    ctx.fillText(ac.flight || ac.r || ac.hex.toUpperCase(), x + 7, y - 5);
-  }
-
-  if (radarOn) animId = requestAnimationFrame(sweep);
-}
-
-// --- list ------------------------------------------------------------------------
 
 function badge(cls, text) {
   const b = document.createElement("span");
@@ -210,7 +169,7 @@ async function render() {
   for (const ac of rows) {
     const li = document.createElement("li");
     li.title = "Open live flight path";
-    li.addEventListener("click", () => chrome.tabs.create({ url: mapUrl(ac.hex, settings) }));
+    li.addEventListener("click", () => openMapFor(ac.hex));
 
     const grow = document.createElement("div");
     grow.className = "grow";
@@ -221,7 +180,7 @@ async function render() {
     sub.className = "sub";
     const dist = distanceNm(ac, settings.lat, settings.lon);
     sub.textContent = [
-      ac.t, ac.r && ac.r !== id.textContent ? ac.r : null, formatAlt(ac),
+      ac.t, ac.r && ac.r !== id.textContent ? ac.r : null, formatAltBoth(ac, settings),
       typeof ac.gs === "number" ? `${Math.round(ac.gs)} kt` : null,
       dist !== null ? `${dist.toFixed(1)} NM` : null
     ].filter(Boolean).join(" · ");
@@ -234,6 +193,12 @@ async function render() {
     }
     list.append(li);
   }
+  if (mapOn) updateMiniMap();
 }
+
+// Live-update the popup while it's open.
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === "session" && changes.snapshot) render();
+});
 
 render();

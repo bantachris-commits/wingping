@@ -1,13 +1,14 @@
 {
   "manifest_version": 3,
   "name": "WingPing — Overhead Aircraft Alerts",
-  "version": "0.2.0",
+  "version": "0.4.1",
   "description": "Alerts when watched aircraft, military traffic, helicopters, jets, or balloons fly overhead. Radar, ATC radio, flight paths.",
   "permissions": ["storage", "alarms", "notifications"],
   "host_permissions": [
     "https://api.airplanes.live/*",
     "https://api.adsb.lol/*",
-    "https://nominatim.openstreetmap.org/*"
+    "https://nominatim.openstreetmap.org/*",
+    "https://api.open-meteo.com/*"
   ],
   "background": {
     "service_worker": "background.js",

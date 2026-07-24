@@ -2,7 +2,7 @@
 // classifies traffic, fires notifications, and caches a snapshot for the popup.
 
 import {
-  DEFAULT_SETTINGS, API_PROVIDERS, evaluate, isUsable, describe, formatAlt,
+  DEFAULT_SETTINGS, API_PROVIDERS, evaluate, isUsable, describe, formatAltBoth,
   distanceNm, mapUrl, CATEGORY_MATCHERS, EMERGENCY_SQUAWKS
 } from "./shared/classify.js";
 
@@ -76,6 +76,24 @@ async function poll() {
   const evaluated = usable.map(ac => ({ ac, match: evaluate(ac, s) }));
   const alerts = evaluated.filter(e => e.match && !e.match.excluded);
 
+  // Accumulate position history for trails on the embedded map.
+  const now = Date.now();
+  const { trails = {} } = await chrome.storage.session.get("trails");
+  for (const ac of usable) {
+    if (typeof ac.lat !== "number" || typeof ac.lon !== "number") continue;
+    const t = trails[ac.hex] || [];
+    const last = t[t.length - 1];
+    if (!last || last[0] !== ac.lat || last[1] !== ac.lon) {
+      t.push([ac.lat, ac.lon, typeof ac.alt_baro === "number" ? ac.alt_baro : null, now]);
+      if (t.length > 240) t.shift(); // ~2 h at 30 s polls
+    }
+    trails[ac.hex] = t;
+  }
+  for (const [hex, t] of Object.entries(trails)) {
+    if (now - t[t.length - 1][3] > 30 * 60 * 1000) delete trails[hex]; // gone 30 min
+  }
+  await chrome.storage.session.set({ trails });
+
   // Snapshot for the popup & radar (ALL overhead traffic, matches flagged).
   await chrome.storage.session.set({
     lastError: null,
@@ -83,9 +101,9 @@ async function poll() {
     lastSource: source,
     snapshot: evaluated.map(({ ac, match }) => ({
       hex: ac.hex, flight: (ac.flight || "").trim(), r: ac.r, t: ac.t,
-      alt_baro: ac.alt_baro, gs: ac.gs, track: ac.track, squawk: ac.squawk,
-      lat: ac.lat, lon: ac.lon, dbFlags: ac.dbFlags, category: ac.category,
-      match
+      alt_baro: ac.alt_baro, alt_geom: ac.alt_geom, gs: ac.gs, track: ac.track,
+      squawk: ac.squawk, lat: ac.lat, lon: ac.lon, dbFlags: ac.dbFlags,
+      category: ac.category, match
     }))
   });
 
@@ -120,7 +138,7 @@ async function notifyNew(alerts, s) {
       type: "basic",
       iconUrl: "icons/icon128.png",
       title: `${labels.join(" · ")} overhead`,
-      message: `${describe(ac)} · ${formatAlt(ac)}${distTxt}`,
+      message: `${describe(ac)} · ${formatAltBoth(ac, s)}${distTxt}`,
       priority: 2,
       buttons: [{ title: "View flight path" }]
     });
@@ -137,7 +155,9 @@ async function openMap(notificationId) {
   const hex = notificationId.split(":")[1];
   if (!hex) return;
   const s = await getSettings();
-  chrome.tabs.create({ url: mapUrl(hex, s) });
+  const url = mapUrl(hex, s);
+  // Embedded map page is a relative extension URL; external globes are absolute.
+  chrome.tabs.create({ url: url.startsWith("http") ? url : chrome.runtime.getURL(url) });
   chrome.notifications.clear(notificationId);
 }
 

@@ -65,6 +65,11 @@
         <input type="text" id="nearestAirport" placeholder="KAPA">
         <div class="hint">For the 📻 ATC link (LiveATC). Auto-fills when you look up an airport code.</div>
       </div>
+      <div>
+        <label>Ground elevation (ft MSL)</label>
+        <input type="number" id="groundElevFt" step="1" placeholder="5,280">
+        <div class="hint">Used to show AGL height. Auto-fills when you look up a location; <a href="#" id="fetchElev">fetch for current lat/lon</a>.</div>
+      </div>
     </div>
   </fieldset>
 
@@ -114,10 +119,20 @@
       <div>
         <label>Map for "View flight path"</label>
         <select id="mapProvider">
+          <option value="wingping">WingPing map (built-in)</option>
           <option value="adsbexchange">ADS-B Exchange globe</option>
           <option value="airplanes.live">airplanes.live globe</option>
           <option value="adsb.lol">adsb.lol</option>
         </select>
+      </div>
+      <div>
+        <label>Built-in map base layer</label>
+        <select id="mapLayer">
+          <option value="satellite">Satellite (Esri)</option>
+          <option value="streets">Streets (OSM)</option>
+          <option value="dark">Dark (CARTO)</option>
+        </select>
+        <div class="hint">You can also switch layers on the map itself (top-right control).</div>
       </div>
     </div>
     <p>
