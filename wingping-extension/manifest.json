@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "WingPing — Overhead Aircraft Alerts",
   "version": "0.2.0",
-  "description": "Alerts when watched aircraft, military traffic, helicopters, jets, balloons and more fly overhead. Radar scope, ATC radio, one-click flight path.",
+  "description": "Alerts when watched aircraft, military traffic, helicopters, jets, or balloons fly overhead. Radar, ATC radio, flight paths.",
   "permissions": ["storage", "alarms", "notifications"],
   "host_permissions": [
     "https://api.airplanes.live/*",
