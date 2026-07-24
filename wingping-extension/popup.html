@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    :root { color-scheme: light dark; }
+    body {
+      width: 360px; margin: 0; font: 13px/1.4 system-ui, sans-serif;
+      background: #0b1220; color: #e5eaf3;
+    }
+    header {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 12px; border-bottom: 1px solid #1f2a44;
+    }
+    header h1 { font-size: 14px; margin: 0; flex: 1; }
+    header button {
+      background: #1d4ed8; color: #fff; border: 0; border-radius: 6px;
+      padding: 4px 10px; cursor: pointer; font-size: 12px;
+    }
+    header a { color: #93b4f8; font-size: 12px; text-decoration: none; }
+    #meta { padding: 6px 12px; color: #8b96ad; font-size: 11px; }
+    #err { padding: 6px 12px; color: #fca5a5; font-size: 12px; }
+    ul { list-style: none; margin: 0; padding: 0; max-height: 380px; overflow-y: auto; }
+    li {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 12px; border-bottom: 1px solid #131c31; cursor: pointer;
+    }
+    li:hover { background: #12203c; }
+    .id { font-weight: 600; }
+    .sub { color: #8b96ad; font-size: 11px; }
+    .grow { flex: 1; min-width: 0; }
+    .badge {
+      font-size: 9px; font-weight: 700; letter-spacing: .04em;
+      padding: 2px 5px; border-radius: 4px; white-space: nowrap;
+    }
+    .b-military { background: #7f1d1d; color: #fecaca; }
+    .b-helicopter { background: #713f12; color: #fde68a; }
+    .b-jet { background: #1e3a8a; color: #bfdbfe; }
+    .b-watch { background: #14532d; color: #bbf7d0; }
+    .empty { padding: 24px 12px; text-align: center; color: #8b96ad; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>WingPing</h1>
+    <button id="refresh">Refresh</button>
+    <a href="#" id="options">Settings</a>
+  </header>
+  <div id="err" hidden></div>
+  <div id="meta"></div>
+  <ul id="list"></ul>
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

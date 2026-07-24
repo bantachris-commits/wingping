@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WingPing — Design Mockup v3</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 40px 24px 80px;
+    font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: #0a0f1c;
+    color: #e5eaf3;
+  }
+  .board { max-width: 1220px; margin: 0 auto; }
+  h1 { font-size: 26px; margin: 0 0 4px; letter-spacing: -0.02em; }
+  .subtitle { color: #7c88a1; margin: 0 0 36px; font-size: 14px; }
+  .row { display: flex; gap: 40px; flex-wrap: wrap; align-items: flex-start; }
+  .panel-label {
+    font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+    color: #5b6b8c; margin: 0 0 10px;
+  }
+  .panel-note { font-size: 12px; color: #7c88a1; margin-top: 10px; max-width: 560px; }
+  .panel-note b { color: #aab6cf; font-weight: 600; }
+  section { margin-bottom: 56px; }
+
+  /* ============ POPUP MOCK ============ */
+  .popup {
+    width: 372px; background: #0b1220; border-radius: 10px; overflow: hidden;
+    border: 1px solid #223051;
+    box-shadow: 0 24px 60px rgba(0,0,0,.55), 0 2px 8px rgba(0,0,0,.4);
+  }
+  .popup header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 11px 14px; border-bottom: 1px solid #1f2a44;
+  }
+  .logo {
+    width: 22px; height: 22px; border-radius: 5px; flex: none;
+    background: #0d1930; border: 1px solid #2d5aa0; position: relative;
+  }
+  .logo::after {
+    content: "✈"; position: absolute; inset: 0; display: grid; place-items: center;
+    color: #facc15; font-size: 12px; transform: rotate(-30deg);
+  }
+  .popup h2 { font-size: 14px; margin: 0; flex: 1; font-weight: 700; }
+  .btn-refresh {
+    background: #1d4ed8; color: #fff; border: 0; border-radius: 6px;
+    padding: 4px 12px; font-size: 12px; font-weight: 600;
+  }
+  .link-settings { color: #93b4f8; font-size: 12px; text-decoration: none; }
+  .meta { padding: 7px 14px 5px; color: #8b96ad; font-size: 11px; }
+  .popup ul { list-style: none; margin: 0; padding: 0; }
+  .popup li {
+    display: flex; align-items: center; gap: 9px;
+    padding: 8px 14px; border-bottom: 1px solid #131c31; cursor: pointer;
+  }
+  .popup li.hovered { background: #12203c; position: relative; }
+  .popup li:last-child { border-bottom: 0; }
+  .sprite-cell { width: 26px; height: 26px; flex: none; display: grid; place-items: center; }
+  .sprite-cell svg { width: 24px; height: 24px; display: block; }
+  .grow { flex: 1; min-width: 0; }
+  .ac-id { font-weight: 650; font-size: 13px; }
+  .ac-sub { color: #8b96ad; font-size: 11px; margin-top: 1px; }
+  .badge {
+    font-size: 9px; font-weight: 800; letter-spacing: .05em;
+    padding: 2.5px 6px; border-radius: 4px; white-space: nowrap; flex: none;
+  }
+  .b-military { background: #7f1d1d; color: #fecaca; }
+  .b-helicopter { background: #713f12; color: #fde68a; }
+  .b-jet { background: #1e3a8a; color: #bfdbfe; }
+  .b-watch { background: #14532d; color: #bbf7d0; }
+  .b-balloon { background: #581c87; color: #e9d5ff; }
+  .b-heavy { background: #312e81; color: #c7d2fe; }
+  .b-emergency { background: #dc2626; color: #fff; box-shadow: 0 0 8px #dc262688; }
+  .tooltip {
+    position: absolute; right: 12px; top: -26px;
+    background: #e5eaf3; color: #0b1220; font-size: 10.5px; font-weight: 600;
+    padding: 3px 9px; border-radius: 5px; white-space: nowrap;
+    box-shadow: 0 4px 14px rgba(0,0,0,.5);
+  }
+  .tooltip::after {
+    content: ""; position: absolute; right: 18px; bottom: -4px;
+    border: 4px solid transparent; border-top-color: #e5eaf3; border-bottom: 0;
+  }
+
+  /* ============ NOTIFICATION MOCK ============ */
+  .notif {
+    width: 380px; background: #202124; border-radius: 10px; overflow: hidden;
+    border: 1px solid #3c4043; box-shadow: 0 24px 60px rgba(0,0,0,.55); color: #e8eaed;
+  }
+  .notif-top { display: flex; gap: 12px; padding: 14px 16px 10px; }
+  .notif .logo { width: 34px; height: 34px; border-radius: 8px; }
+  .notif .logo::after { font-size: 17px; }
+  .notif-title { font-size: 13.5px; font-weight: 700; }
+  .notif-msg { font-size: 12.5px; color: #bdc1c6; margin-top: 3px; }
+  .notif-app { font-size: 10.5px; color: #80868b; margin-top: 5px; }
+  .notif-actions { border-top: 1px solid #3c4043; padding: 8px 12px; display: flex; justify-content: flex-end; }
+  .notif-btn { background: transparent; border: 0; color: #8ab4f8; font-size: 12.5px; font-weight: 600; padding: 6px 12px; border-radius: 5px; }
+  .notif-btn.hovered { background: rgba(138,180,248,.12); }
+
+  .flow { margin: 40px 0 14px; }
+  .flow-steps { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; color: #aab6cf; font-size: 13px; }
+  .step { background: #12203c; border: 1px solid #263356; border-radius: 8px; padding: 9px 16px; }
+  .step b { color: #e5eaf3; }
+  .arrow { color: #5b6b8c; font-size: 17px; }
+
+  /* ============ MAP MOCK ============ */
+  .map {
+    width: 760px; height: 430px; border-radius: 10px; overflow: hidden; position: relative;
+    border: 1px solid #223051; background: #101826;
+    box-shadow: 0 24px 60px rgba(0,0,0,.55);
+  }
+  .map-tabbar {
+    height: 34px; background: #1b2233; display: flex; align-items: center; gap: 8px; padding: 0 12px;
+    border-bottom: 1px solid #2a3450; font-size: 11px; color: #aab6cf; position: relative; z-index: 3;
+  }
+  .tab { background: #0e1526; border-radius: 7px 7px 0 0; padding: 5px 14px 6px; margin-top: 8px; display: flex; align-items: center; gap: 6px; }
+  .map-canvas { position: absolute; inset: 34px 0 0 0; }
+  .map svg.terrain { width: 100%; height: 100%; display: block; }
+
+  .map-infobox {
+    position: absolute; left: 14px; top: 48px; width: 178px;
+    background: rgba(11,18,32,.94); border: 1px solid #2a3450; border-radius: 8px;
+    padding: 10px 12px; font-size: 11px; backdrop-filter: blur(4px); z-index: 2;
+  }
+  .map-infobox .cs { font-size: 14px; font-weight: 800; color: #facc15; }
+  .map-infobox .kv { display: flex; justify-content: space-between; margin-top: 4px; color: #aab6cf; }
+  .map-infobox .kv b { color: #e5eaf3; font-weight: 600; }
+  .mil-chip { display: inline-block; margin-top: 6px; background: #7f1d1d; color: #fecaca; font-size: 9px; font-weight: 800; padding: 2px 6px; border-radius: 4px; letter-spacing: .05em; }
+
+  /* layer switcher */
+  .layers {
+    position: absolute; right: 14px; top: 48px; width: 150px;
+    background: rgba(11,18,32,.94); border: 1px solid #2a3450; border-radius: 8px;
+    font-size: 11.5px; overflow: hidden; backdrop-filter: blur(4px); z-index: 2;
+  }
+  .layers .hd { padding: 7px 11px 5px; font-size: 10px; font-weight: 800; letter-spacing: .1em; color: #7c9bd8; text-transform: uppercase; }
+  .layers .opt { display: flex; align-items: center; gap: 8px; padding: 6px 11px; color: #cdd6e8; cursor: pointer; }
+  .layers .opt.on { background: #16294d; color: #fff; }
+  .layers .swatch { width: 22px; height: 16px; border-radius: 3px; flex: none; border: 1px solid #0006; }
+  .sw-sat { background: linear-gradient(120deg, #2c3b25 40%, #3d4a2b 60%, #55503a); }
+  .sw-str { background: linear-gradient(120deg, #e8e6df 60%, #cfd8dc); }
+  .sw-drk { background: linear-gradient(120deg, #10151f 60%, #1b2233); }
+  .layers .divider { border-top: 1px solid #2a3450; margin: 4px 0 2px; }
+  .layers .toggle { display: flex; align-items: center; gap: 8px; padding: 5px 11px; color: #aab6cf; }
+  .cb { width: 13px; height: 13px; border-radius: 3px; border: 1.5px solid #4b5c85; display: inline-block; flex: none; }
+  .cb.on { background: #1d4ed8; border-color: #1d4ed8; position: relative; }
+  .cb.on::after { content: "✓"; position: absolute; inset: 0; display: grid; place-items: center; color: #fff; font-size: 9px; font-weight: 800; }
+
+  .zoombtns { position: absolute; right: 14px; bottom: 34px; z-index: 2; display: flex; flex-direction: column; border-radius: 7px; overflow: hidden; border: 1px solid #2a3450; }
+  .zoombtns div { width: 30px; height: 30px; background: rgba(11,18,32,.94); display: grid; place-items: center; font-size: 15px; color: #cdd6e8; }
+  .zoombtns div:first-child { border-bottom: 1px solid #2a3450; }
+  .attrib { position: absolute; right: 6px; bottom: 6px; font-size: 8.5px; color: #ffffff88; z-index: 2; text-shadow: 0 1px 2px #000; }
+
+  /* aircraft labels on map */
+  .maplabel { font: 700 9.5px system-ui; paint-order: stroke; stroke: #000a; stroke-width: 2.5px; }
+
+  /* ============ SPRITE SYSTEM ============ */
+  .sprites-panel { background: #0e1526; border: 1px solid #223051; border-radius: 10px; padding: 20px 24px; max-width: 760px; }
+  .sprite-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 14px; margin-top: 6px; }
+  .sprite-card { background: #0b1220; border: 1px solid #1c2740; border-radius: 8px; padding: 12px 8px 10px; text-align: center; }
+  .sprite-card svg { width: 44px; height: 44px; }
+  .sp-name { font-size: 11px; font-weight: 700; margin-top: 6px; }
+  .sp-types { font-size: 9.5px; color: #7c88a1; margin-top: 2px; line-height: 1.35; }
+  .sprite-flow { font-size: 12px; color: #aab6cf; margin-top: 16px; background: #0b1220; border: 1px solid #1c2740; border-radius: 8px; padding: 10px 14px; font-family: ui-monospace, monospace; }
+  .sprite-flow b { color: #facc15; font-weight: 600; }
+
+  /* ============ OPTIONS MOCK ============ */
+  .options {
+    width: 560px; background: #0e1526; border-radius: 10px; overflow: hidden;
+    border: 1px solid #223051; box-shadow: 0 24px 60px rgba(0,0,0,.55);
+    padding: 22px 26px 24px;
+  }
+  .options h2 { margin: 0 0 14px; font-size: 17px; }
+  .fs { border: 1px solid #263356; border-radius: 8px; padding: 12px 16px 14px; margin-bottom: 14px; }
+  .fs-legend { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #7c9bd8; margin-bottom: 10px; }
+  .frow { display: flex; gap: 12px; }
+  .frow > div { flex: 1; }
+  .flabel { font-size: 11px; color: #8b96ad; margin-bottom: 3px; }
+  .finput { background: #0b1220; border: 1px solid #2a3450; border-radius: 6px; padding: 6px 9px; font-size: 12.5px; color: #e5eaf3; }
+  .finput.block { display: block; width: 100%; }
+  .ftext { height: 58px; font-family: ui-monospace, monospace; font-size: 12px; white-space: pre; overflow: hidden; }
+  .check { display: inline-flex; align-items: center; gap: 7px; margin-right: 18px; font-size: 12.5px; }
+  .cb2 { width: 15px; height: 15px; border-radius: 4px; border: 1.5px solid #4b5c85; display: inline-block; flex: none; }
+  .cb2.on { background: #1d4ed8; border-color: #1d4ed8; position: relative; }
+  .cb2.on::after { content: "✓"; position: absolute; inset: 0; display: grid; place-items: center; color: #fff; font-size: 10px; font-weight: 800; }
+  .btn-ghost { background: #2a3450; color: #cdd6e8; border: 0; border-radius: 6px; padding: 6px 12px; font-size: 12px; }
+  .btn-save { background: #1d4ed8; color: #fff; border: 0; border-radius: 6px; padding: 8px 22px; font-size: 13px; font-weight: 600; }
+  .saved { color: #4ade80; font-size: 12px; margin-left: 12px; }
+  .hint { font-size: 10.5px; color: #5b6b8c; margin-top: 4px; }
+</style>
+</head>
+<body>
+<div class="board">
+  <h1>WingPing — Design Mockup <span style="color:#facc15">v3</span></h1>
+  <p class="subtitle">Embedded map (satellite / streets / dark) · type-matched sprites · 9 alert categories incl. balloons · watchlist + exclusion list</p>
+
+  <!-- shared sprite defs -->
+  <svg width="0" height="0" style="position:absolute">
+    <defs>
+      <!-- airliner: swept wings, underwing engines -->
+      <g id="sp-airliner">
+        <path d="M0,-20 C2.2,-20 3,-16 3,-12 L3,-5 L20,4 L20,8 L3.4,4.5 L3,12 L8,16.5 L8,19.5 L0.6,17.5 L-0.6,17.5 L-8,19.5 L-8,16.5 L-3,12 L-3.4,4.5 L-20,8 L-20,4 L-3,-5 L-3,-12 C-3,-16 -2.2,-20 0,-20 Z"/>
+        <rect x="-11.5" y="2.5" width="3.4" height="6.5" rx="1.6"/>
+        <rect x="8.1" y="2.5" width="3.4" height="6.5" rx="1.6"/>
+      </g>
+      <!-- bizjet: small, swept wings, T-tail -->
+      <g id="sp-bizjet">
+        <path d="M0,-18 C1.8,-18 2.4,-14 2.4,-11 L2.4,-2 L14,7 L14,10 L2.6,6.5 L2.4,12 L7.5,15 L7.5,17.5 L0,16 L-7.5,17.5 L-7.5,15 L-2.4,12 L-2.6,6.5 L-14,10 L-14,7 L-2.4,-2 L-2.4,-11 C-2.4,-14 -1.8,-18 0,-18 Z"/>
+        <rect x="-9" y="13.6" width="18" height="2.6" rx="1.3"/>
+      </g>
+      <!-- GA prop: straight wings, prop disc -->
+      <g id="sp-prop">
+        <path d="M0,-15 C1.6,-15 2.2,-12 2.2,-9 L2.2,-4.5 L17,-3.5 L17,0.5 L2.2,1.5 L2,10 L7,12.5 L7,15 L0,13.7 L-7,15 L-7,12.5 L-2,10 L-2.2,1.5 L-17,0.5 L-17,-3.5 L-2.2,-4.5 L-2.2,-9 C-2.2,-12 -1.6,-15 0,-15 Z"/>
+        <circle cx="0" cy="-15.5" r="2.6" opacity=".55"/>
+      </g>
+      <!-- helicopter: fuselage, tail boom, main + tail rotor -->
+      <g id="sp-heli">
+        <ellipse cx="0" cy="-2" rx="4.2" ry="7.5"/>
+        <path d="M-1.5,4 L-1,15 L-4.5,17.5 L-4.5,19.5 L0,18.4 L4.5,19.5 L4.5,17.5 L1,15 L1.5,4 Z"/>
+        <rect x="-1.1" y="14" width="2.2" height="5" rx="1"/>
+        <g opacity=".8"><rect x="-15" y="-3.2" width="30" height="2.2" rx="1.1" transform="rotate(45)"/>
+        <rect x="-15" y="-3.2" width="30" height="2.2" rx="1.1" transform="rotate(-45)"/></g>
+        <circle cx="0" cy="-2" r="1.7" opacity=".9"/>
+      </g>
+      <!-- fighter: delta wings, canted tails -->
+      <g id="sp-fighter">
+        <path d="M0,-19 C1.4,-19 2,-15 2,-12 L2,-6 L13,8 L13,11 L2.2,7 L2,12 L6,16 L6,18.5 L0,16.8 L-6,18.5 L-6,16 L-2,12 L-2.2,7 L-13,11 L-13,8 L-2,-6 L-2,-12 C-2,-15 -1.4,-19 0,-19 Z"/>
+        <path d="M2,-8 L6,-11 L6,-8.5 L2,-6 Z"/><path d="M-2,-8 L-6,-11 L-6,-8.5 L-2,-6 Z"/>
+      </g>
+      <!-- heavy/tanker: 4-engine wide -->
+      <g id="sp-heavy">
+        <path d="M0,-21 C2.4,-21 3.2,-17 3.2,-13 L3.2,-5 L21,5 L21,9 L3.6,5.5 L3.2,13 L9,17.5 L9,20.5 L0.6,18.4 L-0.6,18.4 L-9,20.5 L-9,17.5 L-3.2,13 L-3.6,5.5 L-21,9 L-21,5 L-3.2,-5 L-3.2,-13 C-3.2,-17 -2.4,-21 0,-21 Z"/>
+        <rect x="-14.5" y="3.4" width="3.2" height="6" rx="1.5"/><rect x="-8.5" y="1.6" width="3.2" height="6" rx="1.5"/>
+        <rect x="5.3" y="1.6" width="3.2" height="6" rx="1.5"/><rect x="11.3" y="3.4" width="3.2" height="6" rx="1.5"/>
+      </g>
+      <!-- balloon: envelope + basket -->
+      <g id="sp-balloon">
+        <path d="M0,-16 C8,-16 11,-9 11,-4 C11,2 6,6.5 3,8.5 L3,11 L-3,11 L-3,8.5 C-6,6.5 -11,2 -11,-4 C-11,-9 -8,-16 0,-16 Z"/>
+        <path d="M-3,11 L-4,14 L4,14 L3,11 Z" opacity=".85"/>
+        <rect x="-3.6" y="14" width="7.2" height="5" rx="1.4"/>
+        <path d="M0,-16 C2.6,-16 3.8,-9 3.8,-4 C3.8,1 2,6 1,8.5" fill="none" stroke="#0a0f1c" stroke-width=".9" opacity=".5"/>
+        <path d="M0,-16 C-2.6,-16 -3.8,-9 -3.8,-4 C-3.8,1 -2,6 -1,8.5" fill="none" stroke="#0a0f1c" stroke-width=".9" opacity=".5"/>
+      </g>
+      <!-- glider: very long thin wings, slim body -->
+      <g id="sp-glider">
+        <path d="M0,-13 C1.2,-13 1.7,-10 1.7,-8 L1.7,-3.5 L21,-2.5 L21,0.2 L1.7,0.6 L1.4,10 L5.5,12.5 L5.5,14.5 L0,13.4 L-5.5,14.5 L-5.5,12.5 L-1.4,10 L-1.7,0.6 L-21,0.2 L-21,-2.5 L-1.7,-3.5 L-1.7,-8 C-1.7,-10 -1.2,-13 0,-13 Z"/>
+      </g>
+      <!-- drone / UAV: quadcopter (fill-only so tinting works) -->
+      <g id="sp-drone">
+        <rect x="-3.5" y="-3.5" width="7" height="7" rx="2"/>
+        <rect x="-9.5" y="-1.2" width="19" height="2.4" rx="1.2" transform="rotate(45)"/>
+        <rect x="-9.5" y="-1.2" width="19" height="2.4" rx="1.2" transform="rotate(-45)"/>
+        <path d="M-8.5,-8.5 m-4.6,0 a4.6,4.6 0 1,0 9.2,0 a4.6,4.6 0 1,0 -9.2,0 M-8.5,-8.5 m-2.8,0 a2.8,2.8 0 1,1 5.6,0 a2.8,2.8 0 1,1 -5.6,0" fill-rule="evenodd"/>
+        <path d="M8.5,-8.5 m-4.6,0 a4.6,4.6 0 1,0 9.2,0 a4.6,4.6 0 1,0 -9.2,0 M8.5,-8.5 m-2.8,0 a2.8,2.8 0 1,1 5.6,0 a2.8,2.8 0 1,1 -5.6,0" fill-rule="evenodd"/>
+        <path d="M-8.5,8.5 m-4.6,0 a4.6,4.6 0 1,0 9.2,0 a4.6,4.6 0 1,0 -9.2,0 M-8.5,8.5 m-2.8,0 a2.8,2.8 0 1,1 5.6,0 a2.8,2.8 0 1,1 -5.6,0" fill-rule="evenodd"/>
+        <path d="M8.5,8.5 m-4.6,0 a4.6,4.6 0 1,0 9.2,0 a4.6,4.6 0 1,0 -9.2,0 M8.5,8.5 m-2.8,0 a2.8,2.8 0 1,1 5.6,0 a2.8,2.8 0 1,1 -5.6,0" fill-rule="evenodd"/>
+      </g>
+      <!-- unknown: plain diamond -->
+      <g id="sp-unknown"><path d="M0,-9 L7,0 L0,9 L-7,0 Z"/></g>
+    </defs>
+  </svg>
+
+  <!-- ROW 1: popup + notification -->
+  <div class="row">
+    <section>
+      <p class="panel-label">1 · Toolbar popup — sprites match the aircraft type</p>
+      <div class="popup">
+        <header>
+          <div class="logo"></div>
+          <h2>WingPing</h2>
+          <button class="btn-refresh">Refresh</button>
+          <a class="link-settings" href="#">Settings</a>
+        </header>
+        <div class="meta">7 aircraft within 5 NM · <span style="color:#6b7a97">2 excluded</span> · updated 2:47:31 PM · airplanes.live</div>
+        <ul>
+          <li class="hovered">
+            <div class="tooltip">Open flight path ↗</div>
+            <div class="sprite-cell"><svg viewBox="-24 -24 48 48"><use href="#sp-heli" fill="#f87171" transform="rotate(40)"/></svg></div>
+            <div class="grow">
+              <div class="ac-id">HOIST81</div>
+              <div class="ac-sub">H60 Black Hawk · 1,200 ft · 118 kt · 1.4 NM</div>
+            </div>
+            <span class="badge b-military">MILITARY</span>
+            <span class="badge b-helicopter">HELI</span>
+          </li>
+          <li>
+            <div class="sprite-cell"><svg viewBox="-24 -24 48 48"><use href="#sp-prop" fill="#4ade80" transform="rotate(-70)"/></svg></div>
+            <div class="grow">
+              <div class="ac-id">N90210</div>
+              <div class="ac-sub">C172 Skyhawk · 3,500 ft · 108 kt · 2.9 NM</div>
+            </div>
+            <span class="badge b-watch">WATCH</span>
+          </li>
+          <li>
+            <div class="sprite-cell"><svg viewBox="-24 -24 48 48"><use href="#sp-balloon" fill="#c084fc"/></svg></div>
+            <div class="grow">
+              <div class="ac-id">HBAL617</div>
+              <div class="ac-sub">Balloon · 62,100 ft · 14 kt · 2.2 NM</div>
+            </div>
+            <span class="badge b-balloon">BALLOON</span>
+          </li>
+          <li>
+            <div class="sprite-cell"><svg viewBox="-24 -24 48 48"><use href="#sp-heli" fill="#fbbf24" transform="rotate(160)"/></svg></div>
+            <div class="grow">
+              <div class="ac-id">LIFE4</div>
+              <div class="ac-sub">EC35 · N354LG · 900 ft · 122 kt · 3.1 NM</div>
+            </div>
+            <span class="badge b-helicopter">HELI</span>
+          </li>
+          <li>
+            <div class="sprite-cell"><svg viewBox="-24 -24 48 48"><use href="#sp-airliner" fill="#60a5fa" transform="rotate(15)"/></svg></div>
+            <div class="grow">
+              <div class="ac-id">SWA1234</div>
+              <div class="ac-sub">B738 · 11,300 ft · 292 kt · 3.8 NM</div>
+            </div>
+            <span class="badge b-jet">JET</span>
+          </li>
+          <li>
+            <div class="sprite-cell"><svg viewBox="-24 -24 48 48"><use href="#sp-prop" fill="#94a3b8" transform="rotate(-120)"/></svg></div>
+            <div class="grow">
+              <div class="ac-id">N731CC</div>
+              <div class="ac-sub">PA28 Cherokee · 6,200 ft · 121 kt · 4.2 NM</div>
+            </div>
+          </li>
+          <li>
+            <div class="sprite-cell"><svg viewBox="-24 -24 48 48"><use href="#sp-bizjet" fill="#60a5fa" transform="rotate(85)"/></svg></div>
+            <div class="grow">
+              <div class="ac-id">EJA714</div>
+              <div class="ac-sub">GLF5 Gulfstream V · 8,700 ft · 261 kt · 4.7 NM</div>
+            </div>
+            <span class="badge b-jet">JET</span>
+          </li>
+        </ul>
+      </div>
+      <p class="panel-note">Each row's sprite is the <b>type-matched silhouette rotated to the aircraft's actual heading</b>. Color = alert state: red military, amber helicopter, blue jet, purple balloon, green watchlist, gray unmatched. The "<b>2 excluded</b>" counter shows aircraft hidden by your exclusion list (click to peek).</p>
+    </section>
+
+    <section>
+      <p class="panel-label">2 · Desktop notification</p>
+      <div class="notif">
+        <div class="notif-top">
+          <div class="logo"></div>
+          <div>
+            <div class="notif-title">MILITARY · HELICOPTER overhead</div>
+            <div class="notif-msg">HOIST81 · H60 Black Hawk · 1,200 ft · 1.4 NM</div>
+            <div class="notif-app">Google Chrome · WingPing</div>
+          </div>
+        </div>
+        <div class="notif-actions">
+          <button class="notif-btn hovered">View flight path</button>
+        </div>
+      </div>
+
+      <div class="flow">
+        <p class="panel-label">The core loop</p>
+        <div class="flow-steps">
+          <div class="step">poll ADS-B API<br><b>every 30 s</b></div>
+          <span class="arrow">→</span>
+          <div class="step">exclusion list<br><b>drop first</b></div>
+          <span class="arrow">→</span>
+          <div class="step">classify + match<br><b>9 categories / watchlist</b></div>
+          <span class="arrow">→</span>
+          <div class="step">notify<br><b>with cooldown</b></div>
+          <span class="arrow">→</span>
+          <div class="step">1 click<br><b>map · satellite · trail</b></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ROW 2: map -->
+  <section>
+    <p class="panel-label">3 · WingPing map — satellite layer active, type-matched sprites, live trail</p>
+    <div class="map">
+      <div class="map-tabbar">
+        <div class="tab">🛰 WingPing Map — HOIST81</div>
+      </div>
+      <div class="map-canvas">
+        <svg class="terrain" viewBox="0 0 760 396" preserveAspectRatio="xMidYMid slice">
+          <defs>
+            <filter id="ground"><feTurbulence type="fractalNoise" baseFrequency="0.012 0.02" numOctaves="3" seed="7" result="n"/>
+              <feColorMatrix in="n" type="matrix" values="0 0 0 0 0.16  0 0 0 0 0.20  0 0 0 0 0.11  0 0 0 0 1"/>
+            </filter>
+            <filter id="fields"><feTurbulence type="fractalNoise" baseFrequency="0.05 0.008" numOctaves="2" seed="3" result="n"/>
+              <feColorMatrix in="n" type="matrix" values="0 0 0 0 0.28  0 0 0 0 0.26  0 0 0 0 0.14  0 0 0 0 0.9"/>
+            </filter>
+            <linearGradient id="river" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#1f3d4d"/><stop offset="1" stop-color="#173042"/>
+            </linearGradient>
+          </defs>
+
+          <!-- satellite ground -->
+          <rect width="760" height="396" filter="url(#ground)"/>
+          <rect width="760" height="396" filter="url(#fields)" opacity=".35"/>
+          <!-- suburban patches -->
+          <g opacity=".55" fill="#4a4438">
+            <rect x="40" y="40" width="150" height="90" rx="4"/><rect x="230" y="240" width="180" height="110" rx="4"/>
+            <rect x="560" y="60" width="150" height="120" rx="4"/><rect x="60" y="270" width="120" height="80" rx="4"/>
+          </g>
+          <g opacity=".4" fill="#57503f">
+            <rect x="250" y="60" width="120" height="70" rx="3"/><rect x="450" y="250" width="90" height="80" rx="3"/>
+          </g>
+          <!-- river -->
+          <path d="M-10,330 C120,300 180,350 300,320 S520,270 620,300 740,290 780,270 L780,396 L-10,396 Z" fill="url(#river)" opacity=".9"/>
+          <!-- roads: dark casing + lighter fill (satellite style) -->
+          <g stroke="#0e0f0c" stroke-width="7" fill="none" opacity=".8">
+            <path d="M0,180 C200,175 500,195 760,185"/><path d="M310,0 C315,120 300,280 310,396"/>
+            <path d="M0,90 L760,70"/>
+          </g>
+          <g stroke="#8a8577" stroke-width="2.4" fill="none" opacity=".85">
+            <path d="M0,180 C200,175 500,195 760,185"/><path d="M310,0 C315,120 300,280 310,396"/>
+            <path d="M0,90 L760,70"/>
+          </g>
+          <g stroke="#6b675c" stroke-width="1.1" fill="none" opacity=".5">
+            <path d="M120,0 L110,396"/><path d="M520,0 L530,396"/><path d="M0,300 L760,285"/>
+          </g>
+
+          <!-- home marker + range ring -->
+          <circle cx="380" cy="200" r="96" fill="none" stroke="#60a5fa" stroke-width="1.4" stroke-dasharray="5 6" opacity=".8"/>
+          <circle cx="380" cy="200" r="5" fill="#93b4f8" stroke="#0b1220" stroke-width="1.5"/>
+          <text x="380" y="222" fill="#bfdbfe" font-size="9.5" text-anchor="middle" font-family="system-ui" class="maplabel">HOME · 5 NM</text>
+
+          <!-- selected trail: altitude-colored with glow -->
+          <g fill="none" stroke-linecap="round">
+            <path d="M60,380 C140,350 210,320 290,285 S420,215 500,168" stroke="#000" stroke-width="6" opacity=".35"/>
+            <path d="M60,380 C140,350 210,320 290,285" stroke="#22c55e" stroke-width="3.2"/>
+            <path d="M290,285 C330,266 372,242 410,220" stroke="#eab308" stroke-width="3.2"/>
+            <path d="M410,220 C445,200 475,183 500,168" stroke="#f97316" stroke-width="3.2"/>
+          </g>
+          <g fill="#0a0f1c" stroke="#22c55e" stroke-width="1.5">
+            <circle cx="140" cy="350" r="2.6"/><circle cx="215" cy="317" r="2.6"/><circle cx="290" cy="285" r="2.6"/>
+          </g>
+          <g fill="#0a0f1c" stroke="#eab308" stroke-width="1.5"><circle cx="352" cy="252" r="2.6"/><circle cx="410" cy="220" r="2.6"/></g>
+
+          <!-- SELECTED: HOIST81 heli sprite -->
+          <g transform="translate(500,168)">
+            <circle r="19" fill="none" stroke="#facc15" stroke-width="1.6" opacity=".6"/>
+            <use href="#sp-heli" fill="#f87171" stroke="#0a0f1c" stroke-width="1" transform="rotate(58) scale(1.05)"/>
+            <text x="24" y="-8" class="maplabel" fill="#fecaca">HOIST81</text>
+            <text x="24" y="4" class="maplabel" fill="#e5eaf3" font-weight="500">H60 · 1,200ft</text>
+          </g>
+
+          <!-- other traffic, each with its own sprite -->
+          <g transform="translate(210,120)">
+            <use href="#sp-airliner" fill="#60a5fa" stroke="#0a0f1c" stroke-width="1" transform="rotate(15) scale(.92)"/>
+            <text x="22" y="-6" class="maplabel" fill="#bfdbfe">SWA1234</text>
+            <text x="22" y="6" class="maplabel" fill="#cbd5e1" font-weight="500">B738 · 11,300ft</text>
+          </g>
+          <g transform="translate(600,290)">
+            <use href="#sp-prop" fill="#4ade80" stroke="#0a0f1c" stroke-width="1" transform="rotate(-70) scale(.85)"/>
+            <text x="20" y="-4" class="maplabel" fill="#bbf7d0">N90210</text>
+            <text x="20" y="8" class="maplabel" fill="#cbd5e1" font-weight="500">C172 · 3,500ft</text>
+          </g>
+          <g transform="translate(150,240)">
+            <use href="#sp-heli" fill="#fbbf24" stroke="#0a0f1c" stroke-width="1" transform="rotate(160) scale(.85)"/>
+            <text x="20" y="-4" class="maplabel" fill="#fde68a">LIFE4</text>
+            <text x="20" y="8" class="maplabel" fill="#cbd5e1" font-weight="500">EC35 · 900ft</text>
+          </g>
+          <g transform="translate(660,120)">
+            <use href="#sp-bizjet" fill="#60a5fa" stroke="#0a0f1c" stroke-width="1" transform="rotate(85) scale(.85)"/>
+            <text x="-64" y="-6" class="maplabel" fill="#bfdbfe">EJA714</text>
+            <text x="-64" y="6" class="maplabel" fill="#cbd5e1" font-weight="500">GLF5 · 8,700ft</text>
+          </g>
+          <g transform="translate(430,340)">
+            <use href="#sp-prop" fill="#94a3b8" stroke="#0a0f1c" stroke-width="1" transform="rotate(-120) scale(.8)"/>
+            <text x="18" y="0" class="maplabel" fill="#cbd5e1">N731CC · PA28</text>
+          </g>
+          <g transform="translate(320,90)">
+            <use href="#sp-balloon" fill="#c084fc" stroke="#0a0f1c" stroke-width="1" transform="scale(.9)"/>
+            <text x="18" y="-4" class="maplabel" fill="#e9d5ff">HBAL617</text>
+            <text x="18" y="8" class="maplabel" fill="#cbd5e1" font-weight="500">BALL · 62,100ft</text>
+          </g>
+        </svg>
+      </div>
+
+      <!-- infobox -->
+      <div class="map-infobox">
+        <div class="cs">HOIST81</div>
+        <div class="mil-chip">MILITARY</div>
+        <div class="kv"><span>Type</span><b>H60 Black Hawk</b></div>
+        <div class="kv"><span>Hex</span><b>AE01CE</b></div>
+        <div class="kv"><span>Altitude</span><b>1,200 ft</b></div>
+        <div class="kv"><span>Speed</span><b>118 kt</b></div>
+        <div class="kv"><span>Track</span><b>058°</b></div>
+        <div class="kv"><span>Distance</span><b>1.4 NM</b></div>
+      </div>
+
+      <!-- layer switcher -->
+      <div class="layers">
+        <div class="hd">Base layer</div>
+        <div class="opt on"><span class="swatch sw-sat"></span> Satellite <span style="margin-left:auto">✓</span></div>
+        <div class="opt"><span class="swatch sw-str"></span> Streets</div>
+        <div class="opt"><span class="swatch sw-drk"></span> Dark</div>
+        <div class="divider"></div>
+        <div class="hd">Overlays</div>
+        <div class="toggle"><span class="cb on"></span> Flight trail</div>
+        <div class="toggle"><span class="cb on"></span> Labels</div>
+        <div class="toggle"><span class="cb on"></span> Range ring</div>
+        <div class="toggle"><span class="cb"></span> Other traffic dimmed</div>
+      </div>
+
+      <div class="zoombtns"><div>+</div><div>−</div></div>
+      <div class="attrib">Imagery © Esri World Imagery · Streets © OpenStreetMap · Dark © CARTO</div>
+    </div>
+    <p class="panel-note">The map is now an <b>extension page (map.html)</b> — MapLibre GL bundled locally (MV3 forbids CDN scripts) with three raster base layers: <b>Esri World Imagery (satellite)</b>, OSM streets, CARTO dark. Trail = positions accumulated from each 30 s poll (session history), altitude-colored green→orange. The external globe sites (ADSBx / airplanes.live) remain a right-click "open in…" fallback for deep history.</p>
+  </section>
+
+  <!-- ROW 3: sprite system -->
+  <section>
+    <p class="panel-label">4 · Sprite system — silhouette chosen from ICAO type designator</p>
+    <div class="sprites-panel">
+      <div class="sprite-grid">
+        <div class="sprite-card">
+          <svg viewBox="-26 -26 52 52"><use href="#sp-heli" fill="#fbbf24"/></svg>
+          <div class="sp-name">Rotorcraft</div>
+          <div class="sp-types">H60 · EC35 · R44 · B407 · A139 · S76 … or category A7</div>
+        </div>
+        <div class="sprite-card">
+          <svg viewBox="-26 -26 52 52"><use href="#sp-airliner" fill="#60a5fa"/></svg>
+          <div class="sp-name">Airliner</div>
+          <div class="sp-types">A320 · B738 · B789 · E175 · CRJ9 · BCS3 …</div>
+        </div>
+        <div class="sprite-card">
+          <svg viewBox="-26 -26 52 52"><use href="#sp-heavy" fill="#818cf8"/></svg>
+          <div class="sp-name">Heavy / 4-eng</div>
+          <div class="sp-types">B744 · B748 · A380 · A346 · C5M · C17 · K35R</div>
+        </div>
+        <div class="sprite-card">
+          <svg viewBox="-26 -26 52 52"><use href="#sp-bizjet" fill="#60a5fa"/></svg>
+          <div class="sp-name">Bizjet</div>
+          <div class="sp-types">GLF5 · GL7T · C750 · CL60 · F2TH · LJ45 · PC24 …</div>
+        </div>
+        <div class="sprite-card">
+          <svg viewBox="-26 -26 52 52"><use href="#sp-fighter" fill="#f87171"/></svg>
+          <div class="sp-name">Fast mover</div>
+          <div class="sp-types">F16 · F35 · F22 · FA18 · A10 · T38 · EUFI …</div>
+        </div>
+        <div class="sprite-card">
+          <svg viewBox="-26 -26 52 52"><use href="#sp-prop" fill="#4ade80"/></svg>
+          <div class="sp-name">Piston / TP</div>
+          <div class="sp-types">C172 · PA28 · SR22 · DA40 · PC12 · B350 · AT8T …</div>
+        </div>
+        <div class="sprite-card">
+          <svg viewBox="-26 -26 52 52"><use href="#sp-balloon" fill="#c084fc"/></svg>
+          <div class="sp-name">Balloon</div>
+          <div class="sp-types">BALL · HBAL/HBL callsigns · category B2 (lighter-than-air)</div>
+        </div>
+        <div class="sprite-card">
+          <svg viewBox="-26 -26 52 52"><use href="#sp-glider" fill="#2dd4bf"/></svg>
+          <div class="sp-name">Glider</div>
+          <div class="sp-types">GLID · DG80 · ASK21 · DISC · category B1</div>
+        </div>
+        <div class="sprite-card">
+          <svg viewBox="-26 -26 52 52"><use href="#sp-drone" fill="#f472b6"/></svg>
+          <div class="sp-name">Drone / UAV</div>
+          <div class="sp-types">Q4XX · M600 · SHLD · category B6 (UAV)</div>
+        </div>
+        <div class="sprite-card">
+          <svg viewBox="-26 -26 52 52"><use href="#sp-unknown" fill="#94a3b8"/></svg>
+          <div class="sp-name">Unknown</div>
+          <div class="sp-types">no type broadcast → fall back to emitter category A1–A5 size</div>
+        </div>
+      </div>
+      <div class="sprite-flow">
+        sprite = <b>byType[t]</b> (exact designator map, ~600 entries, tar1090-style)<br>
+        &nbsp;&nbsp;?? <b>byCategory[category]</b> (A7→rotor · A5→heavy · A3/A4→airliner · A1/A2→prop · <b>B1→glider · B2→balloon · B6→drone</b>)<br>
+        &nbsp;&nbsp;?? <b>diamond</b> — then rotate(track°) · tint by alert state · scale by wake class
+      </div>
+    </div>
+    <p class="panel-note">Same lookup drives the popup icons and the map markers, so an EC35 looks like a helicopter everywhere. Where the type is known we also show the <b>model name</b> ("H60 Black Hawk", "C172 Skyhawk") from a bundled designator→name table.</p>
+  </section>
+
+  <!-- ROW 4: options -->
+  <section>
+    <p class="panel-label">5 · Settings — new map section</p>
+    <div class="options">
+      <h2>WingPing Settings</h2>
+      <div class="fs">
+        <div class="fs-legend">Map</div>
+        <div class="frow">
+          <div><div class="flabel">Default base layer</div><div class="finput block">Satellite (Esri World Imagery) ▾</div></div>
+          <div><div class="flabel">Open flight path in</div><div class="finput block">WingPing map (embedded) ▾</div></div>
+        </div>
+        <div style="margin-top:10px">
+          <span class="check"><span class="cb2 on"></span> Flight trail</span>
+          <span class="check"><span class="cb2 on"></span> Labels</span>
+          <span class="check"><span class="cb2 on"></span> Range ring</span>
+        </div>
+        <div class="hint">Fallback option opens ADS-B Exchange / airplanes.live globe instead of the embedded map.</div>
+      </div>
+      <div class="fs">
+        <div class="fs-legend">Alert categories</div>
+        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 6px 4px;">
+          <span class="check"><span class="cb2 on"></span> Military</span>
+          <span class="check"><span class="cb2 on"></span> Helicopters</span>
+          <span class="check"><span class="cb2"></span> Jets</span>
+          <span class="check"><span class="cb2"></span> Heavies (A5)</span>
+          <span class="check"><span class="cb2 on"></span> Balloons</span>
+          <span class="check"><span class="cb2"></span> Gliders</span>
+          <span class="check"><span class="cb2"></span> Drones / UAV</span>
+          <span class="check"><span class="cb2"></span> Props / GA</span>
+          <span class="check"><span class="cb2 on"></span> Emergency squawk</span>
+        </div>
+        <div class="hint">Emergency = squawk 7500 / 7600 / 7700 — alerts even for excluded aircraft. Jets &amp; props off by default near cities.</div>
+      </div>
+      <div class="fs">
+        <div class="fs-legend">Watchlist — always alert · hex · tail · callsign · type</div>
+        <div class="finput block ftext">N90210
+AE01CE
+SAM46
+EC35</div>
+      </div>
+      <div class="fs">
+        <div class="fs-legend">Exclusion list — never alert · supports trailing * wildcard</div>
+        <div class="finput block ftext">LIFE*      ← medevac base next door
+SWA*       ← airline callsign prefix
+N731CC     ← flight-school Cherokee
+A4CFD2     ← specific hex</div>
+        <div class="hint">Checked first: an excluded aircraft never notifies and is hidden from the popup (counted as "excluded"). Watchlist beats category matches; emergency squawks beat everything.</div>
+      </div>
+      <div><button class="btn-save">Save</button><span class="saved">✓ Saved — polling restarted.</span></div>
+    </div>
+  </section>
+</div>
+</body>
+</html>
