@@ -2,8 +2,8 @@
 // classifies traffic, fires notifications, and caches a snapshot for the popup.
 
 import {
-  DEFAULT_SETTINGS, API_PROVIDERS, evaluate, isUsable,
-  describe, formatAlt, distanceNm, mapUrl, CATEGORY_MATCHERS
+  DEFAULT_SETTINGS, API_PROVIDERS, evaluate, isUsable, describe, formatAlt,
+  distanceNm, mapUrl, CATEGORY_MATCHERS, EMERGENCY_SQUAWKS
 } from "./shared/classify.js";
 
 const ALARM = "wingping-poll";
@@ -73,46 +73,46 @@ async function poll() {
   }
 
   const usable = aircraft.filter(ac => isUsable(ac, s));
-  const matches = [];
-  for (const ac of usable) {
-    const hit = evaluate(ac, s);
-    if (hit) matches.push({ ac, hit });
-  }
+  const evaluated = usable.map(ac => ({ ac, match: evaluate(ac, s) }));
+  const alerts = evaluated.filter(e => e.match && !e.match.excluded);
 
-  // Snapshot for the popup (all overhead traffic, matches flagged).
+  // Snapshot for the popup & radar (ALL overhead traffic, matches flagged).
   await chrome.storage.session.set({
     lastError: null,
     lastPoll: Date.now(),
     lastSource: source,
-    snapshot: usable.map(ac => ({
+    snapshot: evaluated.map(({ ac, match }) => ({
       hex: ac.hex, flight: (ac.flight || "").trim(), r: ac.r, t: ac.t,
-      alt_baro: ac.alt_baro, gs: ac.gs, lat: ac.lat, lon: ac.lon,
-      dbFlags: ac.dbFlags, category: ac.category,
-      match: evaluate(ac, s)
+      alt_baro: ac.alt_baro, gs: ac.gs, track: ac.track, squawk: ac.squawk,
+      lat: ac.lat, lon: ac.lon, dbFlags: ac.dbFlags, category: ac.category,
+      match
     }))
   });
 
-  // Toolbar badge = number of matched aircraft overhead right now.
+  // Toolbar badge = number of alerting aircraft overhead right now.
   await chrome.action.setBadgeBackgroundColor({ color: "#1d4ed8" });
-  await chrome.action.setBadgeText({ text: matches.length ? String(matches.length) : "" });
+  await chrome.action.setBadgeText({ text: alerts.length ? String(alerts.length) : "" });
 
-  if (s.notify) await notifyNew(matches, s);
+  if (s.notify) await notifyNew(alerts, s);
 }
 
 // --- notifications with per-aircraft cooldown --------------------------------
 
-async function notifyNew(matches, s) {
+async function notifyNew(alerts, s) {
   const now = Date.now();
   const cooldownMs = (s.cooldownMinutes || 30) * 60 * 1000;
   const { alerted = {} } = await chrome.storage.local.get("alerted");
 
-  for (const { ac, hit } of matches) {
+  for (const { ac, match } of alerts) {
     const last = alerted[ac.hex] || 0;
     if (now - last < cooldownMs) continue;
     alerted[ac.hex] = now;
 
-    const labels = hit.categories.map(c => CATEGORY_MATCHERS[c].label);
-    if (hit.watch) labels.unshift(`WATCHLIST:${hit.watch}`);
+    const labels = match.categories.map(c =>
+      c === "emergency"
+        ? `⚠ ${EMERGENCY_SQUAWKS[ac.squawk] || "EMERGENCY"} (${ac.squawk})`
+        : CATEGORY_MATCHERS[c].label);
+    if (match.watch) labels.unshift(`WATCHLIST:${match.watch}`);
     const dist = distanceNm(ac, s.lat, s.lon);
     const distTxt = dist !== null ? ` · ${dist.toFixed(1)} NM` : "";
 

@@ -5,7 +5,7 @@
   <style>
     :root { color-scheme: light dark; }
     body {
-      width: 360px; margin: 0; font: 13px/1.4 system-ui, sans-serif;
+      width: 380px; margin: 0; font: 13px/1.4 system-ui, sans-serif;
       background: #0b1220; color: #e5eaf3;
     }
     header {
@@ -17,10 +17,19 @@
       background: #1d4ed8; color: #fff; border: 0; border-radius: 6px;
       padding: 4px 10px; cursor: pointer; font-size: 12px;
     }
+    header button.toggled { background: #166534; }
     header a { color: #93b4f8; font-size: 12px; text-decoration: none; }
     #meta { padding: 6px 12px; color: #8b96ad; font-size: 11px; }
+    #meta .excl { color: #6b7a97; }
     #err { padding: 6px 12px; color: #fca5a5; font-size: 12px; }
-    ul { list-style: none; margin: 0; padding: 0; max-height: 380px; overflow-y: auto; }
+
+    /* radar scope */
+    #radarWrap { display: none; padding: 8px 12px 4px; }
+    #radarWrap.open { display: block; }
+    #radar { display: block; margin: 0 auto; cursor: crosshair; }
+    #radarHint { text-align: center; color: #5b6b8c; font-size: 10px; margin: 4px 0 2px; }
+
+    ul { list-style: none; margin: 0; padding: 0; max-height: 340px; overflow-y: auto; }
     li {
       display: flex; align-items: center; gap: 8px;
       padding: 8px 12px; border-bottom: 1px solid #131c31; cursor: pointer;
@@ -36,18 +45,30 @@
     .b-military { background: #7f1d1d; color: #fecaca; }
     .b-helicopter { background: #713f12; color: #fde68a; }
     .b-jet { background: #1e3a8a; color: #bfdbfe; }
+    .b-heavy { background: #312e81; color: #c7d2fe; }
+    .b-balloon { background: #581c87; color: #e9d5ff; }
+    .b-glider { background: #134e4a; color: #99f6e4; }
+    .b-drone { background: #831843; color: #fbcfe8; }
+    .b-prop { background: #374151; color: #d1d5db; }
     .b-watch { background: #14532d; color: #bbf7d0; }
+    .b-emergency { background: #dc2626; color: #fff; }
     .empty { padding: 24px 12px; text-align: center; color: #8b96ad; }
   </style>
 </head>
 <body>
   <header>
     <h1>WingPing</h1>
+    <button id="radarBtn" title="Toggle radar scope">📡</button>
+    <a href="#" id="atc" title="Listen to live air traffic control">📻 ATC</a>
     <button id="refresh">Refresh</button>
     <a href="#" id="options">Settings</a>
   </header>
   <div id="err" hidden></div>
   <div id="meta"></div>
+  <div id="radarWrap">
+    <canvas id="radar" width="340" height="340"></canvas>
+    <div id="radarHint">All traffic in range, alert status or not · click a blip for its flight path</div>
+  </div>
   <ul id="list"></ul>
   <script type="module" src="popup.js"></script>
 </body>

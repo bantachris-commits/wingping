@@ -1,6 +1,7 @@
 import { DEFAULT_SETTINGS } from "./shared/classify.js";
 
 const $ = id => document.getElementById(id);
+const CATS = ["military", "helicopter", "jet", "heavy", "balloon", "glider", "drone", "prop", "emergency"];
 
 async function load() {
   const { settings } = await chrome.storage.sync.get("settings");
@@ -16,10 +17,46 @@ async function load() {
   $("mapProvider").value = s.mapProvider;
   $("notify").checked = s.notify;
   $("ignoreGround").checked = s.ignoreGround;
-  $("cat-military").checked = s.categories.military;
-  $("cat-helicopter").checked = s.categories.helicopter;
-  $("cat-jet").checked = s.categories.jet;
+  $("nearestAirport").value = s.nearestAirport || "";
+  for (const c of CATS) $(`cat-${c}`).checked = !!s.categories[c];
   $("watchlist").value = (s.watchlist || []).join("\n");
+  $("exclusions").value = (s.exclusions || []).join("\n");
+}
+
+// --- address / airport-code lookup via Nominatim (OpenStreetMap) ---------------
+
+const looksLikeAirportCode = q => /^[A-Za-z]{3,4}$/.test(q.trim());
+
+$("lookupBtn").addEventListener("click", lookup);
+$("lookup").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); lookup(); } });
+
+async function lookup() {
+  const q = $("lookup").value.trim();
+  const status = $("lookupStatus");
+  if (!q) { status.textContent = "Type an address, place, or airport code first."; return; }
+
+  const isCode = looksLikeAirportCode(q);
+  const query = isCode ? `${q.toUpperCase()} airport` : q;
+  status.textContent = "Searching…";
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(query)}`;
+    const res = await fetch(url, { headers: { accept: "application/json" } });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const results = await res.json();
+    if (!results.length) { status.textContent = `No match for "${q}".`; return; }
+
+    const hit = results[0];
+    $("lat").value = parseFloat(hit.lat).toFixed(5);
+    $("lon").value = parseFloat(hit.lon).toFixed(5);
+    status.textContent = `✓ ${hit.display_name}`;
+
+    if (isCode) {
+      // 4 letters ≈ ICAO already; 3 letters is IATA — LiveATC handles both in search.
+      $("nearestAirport").value = q.toUpperCase();
+    }
+  } catch (e) {
+    status.textContent = `Lookup failed: ${e.message}`;
+  }
 }
 
 $("geo").addEventListener("click", () => {
@@ -28,16 +65,23 @@ $("geo").addEventListener("click", () => {
     pos => {
       $("lat").value = pos.coords.latitude.toFixed(5);
       $("lon").value = pos.coords.longitude.toFixed(5);
-      $("geo").textContent = "Use my current location";
+      $("geo").textContent = "📍 My location";
     },
     e => {
-      $("geo").textContent = `Location failed: ${e.message}`;
+      $("geo").textContent = `Failed: ${e.message}`;
     },
     { enableHighAccuracy: false, timeout: 10000 }
   );
 });
 
+// --- save -----------------------------------------------------------------------
+
+const parseList = txt => txt.split(/[\n,]+/).map(x => x.trim()).filter(Boolean);
+
 $("save").addEventListener("click", async () => {
+  const categories = {};
+  for (const c of CATS) categories[c] = $(`cat-${c}`).checked;
+
   const settings = {
     lat: parseFloat($("lat").value),
     lon: parseFloat($("lon").value),
@@ -49,15 +93,10 @@ $("save").addEventListener("click", async () => {
     notify: $("notify").checked,
     ignoreGround: $("ignoreGround").checked,
     maxStaleSeconds: DEFAULT_SETTINGS.maxStaleSeconds,
-    categories: {
-      military: $("cat-military").checked,
-      helicopter: $("cat-helicopter").checked,
-      jet: $("cat-jet").checked
-    },
-    watchlist: $("watchlist").value
-      .split(/[\n,]+/)
-      .map(x => x.trim())
-      .filter(Boolean)
+    nearestAirport: $("nearestAirport").value.trim().toUpperCase(),
+    categories,
+    watchlist: parseList($("watchlist").value),
+    exclusions: parseList($("exclusions").value)
   };
 
   if (!Number.isFinite(settings.lat) || !Number.isFinite(settings.lon)) {

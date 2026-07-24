@@ -89,6 +89,7 @@ git push --tags
      - `alarms` — periodic polling of the aircraft-position API.
      - `notifications` — the overhead alerts themselves.
      - Host permissions (`api.airplanes.live`, `api.adsb.lol`) — fetch public ADS-B aircraft positions around the user's chosen location.
+     - Host permission (`nominatim.openstreetmap.org`) — one-off geocoding when the user looks up an address or airport code on the options page.
    - *Data usage*: declare that location is user-entered, stored locally/sync only, and **not transmitted anywhere except as API query parameters**; no data sold/shared. WingPing has no analytics — say so.
    - You'll need a **privacy policy URL** — a `PRIVACY.md` in the GitHub repo works (link the raw/rendered page).
 5. Submit for review. First review typically takes **1–3 days** (can be longer). Broad host permissions and remote code are the usual rejection reasons — WingPing has neither (two named API hosts, all code bundled), so it should pass cleanly.

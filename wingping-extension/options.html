@@ -6,25 +6,29 @@
   <style>
     :root { color-scheme: light dark; }
     body {
-      max-width: 620px; margin: 32px auto; padding: 0 16px;
+      max-width: 640px; margin: 32px auto; padding: 0 16px;
       font: 14px/1.5 system-ui, sans-serif;
     }
     h1 { font-size: 20px; }
     fieldset { border: 1px solid #8884; border-radius: 8px; margin: 16px 0; padding: 12px 16px; }
     legend { font-weight: 600; padding: 0 6px; }
     label { display: block; margin: 8px 0 2px; font-weight: 500; }
-    label.inline { display: inline-flex; align-items: center; gap: 6px; font-weight: 400; margin-right: 16px; }
+    label.inline { display: inline-flex; align-items: center; gap: 6px; font-weight: 400; margin: 4px 16px 4px 0; }
     input[type=number], input[type=text], select, textarea {
       width: 100%; box-sizing: border-box; padding: 6px 8px;
       border: 1px solid #8886; border-radius: 6px; font: inherit;
     }
     .row { display: flex; gap: 12px; }
     .row > div { flex: 1; }
+    .lookup-row { display: flex; gap: 8px; align-items: flex-end; }
+    .lookup-row > div { flex: 1; }
     textarea { height: 90px; font-family: ui-monospace, monospace; }
+    .cats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px 8px; }
     .hint { color: #888; font-size: 12px; margin-top: 2px; }
     button { padding: 8px 18px; border: 0; border-radius: 6px; background: #1d4ed8; color: #fff; font: inherit; cursor: pointer; }
-    button.secondary { background: #4b5563; }
+    button.secondary { background: #4b5563; padding: 7px 12px; }
     #status { margin-left: 12px; color: #16a34a; }
+    #lookupStatus { font-size: 12px; margin-top: 4px; color: #888; min-height: 16px; }
   </style>
 </head>
 <body>
@@ -32,12 +36,20 @@
 
   <fieldset>
     <legend>Location</legend>
+    <div class="lookup-row">
+      <div>
+        <label>Find by address, place, or airport code</label>
+        <input type="text" id="lookup" placeholder="1600 Pennsylvania Ave · Denver, CO · KAPA · DEN">
+      </div>
+      <button class="secondary" id="lookupBtn" type="button">Look up</button>
+      <button class="secondary" id="geo" type="button">📍 My location</button>
+    </div>
+    <div id="lookupStatus"></div>
     <div class="row">
       <div><label>Latitude</label><input type="number" id="lat" step="any"></div>
       <div><label>Longitude</label><input type="number" id="lon" step="any"></div>
     </div>
-    <p><button class="secondary" id="geo" type="button">Use my current location</button></p>
-    <div class="row">
+    <div class="row" style="margin-top:6px">
       <div>
         <label>Alert radius (NM)</label>
         <input type="number" id="radiusNm" min="1" max="250" step="1">
@@ -48,22 +60,41 @@
         <input type="number" id="pollSeconds" min="30" step="5">
         <div class="hint">Chrome's minimum is 30 s.</div>
       </div>
+      <div>
+        <label>ATC radio airport (ICAO)</label>
+        <input type="text" id="nearestAirport" placeholder="KAPA">
+        <div class="hint">For the 📻 ATC link (LiveATC). Auto-fills when you look up an airport code.</div>
+      </div>
     </div>
   </fieldset>
 
   <fieldset>
     <legend>Alert categories</legend>
-    <label class="inline"><input type="checkbox" id="cat-military"> Military</label>
-    <label class="inline"><input type="checkbox" id="cat-helicopter"> Helicopters</label>
-    <label class="inline"><input type="checkbox" id="cat-jet"> Jets</label>
-    <div class="hint">Jets are off by default — near a city this fires constantly.</div>
+    <div class="cats">
+      <label class="inline"><input type="checkbox" id="cat-military"> Military</label>
+      <label class="inline"><input type="checkbox" id="cat-helicopter"> Helicopters</label>
+      <label class="inline"><input type="checkbox" id="cat-jet"> Jets</label>
+      <label class="inline"><input type="checkbox" id="cat-heavy"> Heavies</label>
+      <label class="inline"><input type="checkbox" id="cat-balloon"> Balloons</label>
+      <label class="inline"><input type="checkbox" id="cat-glider"> Gliders</label>
+      <label class="inline"><input type="checkbox" id="cat-drone"> Drones / UAV</label>
+      <label class="inline"><input type="checkbox" id="cat-prop"> Props / GA</label>
+      <label class="inline"><input type="checkbox" id="cat-emergency"> Emergency squawk</label>
+    </div>
+    <div class="hint">Emergency = squawk 7500 / 7600 / 7700 — alerts even for excluded aircraft. Jets &amp; props are noisy near cities.</div>
   </fieldset>
 
   <fieldset>
-    <legend>Watchlist</legend>
-    <label>Specific aircraft (one per line or comma-separated)</label>
+    <legend>Watchlist — always alert</legend>
+    <label>One per line or comma-separated · hex, tail number, callsign, or type · trailing * = prefix wildcard</label>
     <textarea id="watchlist" placeholder="N90210&#10;AE01CE&#10;SAM46&#10;EC35"></textarea>
-    <div class="hint">Each entry matches ICAO hex, registration/tail number, callsign, or ICAO type code.</div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Exclusion list — never alert</legend>
+    <label>Same matching rules · checked before everything except emergency squawks</label>
+    <textarea id="exclusions" placeholder="LIFE*&#10;SWA*&#10;N731CC"></textarea>
+    <div class="hint">Excluded aircraft are hidden from the popup list (still visible dimmed on the radar scope).</div>
   </fieldset>
 
   <fieldset>
@@ -80,13 +111,15 @@
           <option value="adsb.lol">adsb.lol (fallback: airplanes.live)</option>
         </select>
       </div>
+      <div>
+        <label>Map for "View flight path"</label>
+        <select id="mapProvider">
+          <option value="adsbexchange">ADS-B Exchange globe</option>
+          <option value="airplanes.live">airplanes.live globe</option>
+          <option value="adsb.lol">adsb.lol</option>
+        </select>
+      </div>
     </div>
-    <label>Map for "View flight path"</label>
-    <select id="mapProvider">
-      <option value="adsbexchange">ADS-B Exchange globe</option>
-      <option value="airplanes.live">airplanes.live globe</option>
-      <option value="adsb.lol">adsb.lol</option>
-    </select>
     <p>
       <label class="inline"><input type="checkbox" id="notify"> Desktop notifications</label>
       <label class="inline"><input type="checkbox" id="ignoreGround"> Ignore aircraft on the ground</label>
